@@ -1,0 +1,9 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+<title>Proxy error: 504 Connect to elective.pku.edu.cn:80 failed: Too many open files.</title>
+</head><body>
+<h1>504 Connect to elective.pku.edu.cn:80 failed: Too many open files</h1>
+<p>The following error occurred while trying to access <strong>http://elective.pku.edu.cn/elective2008/DrawServlet?Rand=9912.118702195585</strong>:<br><br>
+<strong>504 Connect to elective.pku.edu.cn:80 failed: Too many open files</strong></p>
+<hr>Generated Sat, 05 Mar 2016 17:01:57 CST by Polipo on <em>localhost:8119</em>.
+</body></html>

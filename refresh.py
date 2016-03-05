@@ -8,6 +8,8 @@ from time import sleep
 import denoise
 import thread
 
+import course_codes
+
 class pku_elective:
     oauthLogin = 'https://iaaa.pku.edu.cn/iaaa/oauthlogin.do'
     ssoLogin = 'http://elective.pku.edu.cn/elective2008/ssoLogin.do'
@@ -20,10 +22,10 @@ class pku_elective:
     page_refresh = 'http://elective.pku.edu.cn/elective2008/edu/pku/stu/elective/controller/supplement/refreshLimit.do'
     page_elect = 'http://elective.pku.edu.cn/elective2008/edu/pku/stu/elective/controller/supplement/electSupplement.do'
     count = 0
-    def __init__(self, numbers):
+    def __init__(self, codes):
         self.data = []
         self.sess = requests.Session()
-        self.numbers = numbers
+        self.codes = codes
         self.now = 0
 
     def getNext(self, url, params=[], referer=''):
@@ -34,7 +36,7 @@ class pku_elective:
                 r = self.sess.get(url, params=params)
                 break
             except:
-                print "Network Problem...1"
+                print "[Error] GET", url
                 sleep(30)
         return r.content
 
@@ -48,7 +50,7 @@ class pku_elective:
 #                print r.text
                 break
             except:
-                print "Network Problem...2"
+                print "[Error] POST", url
                 sleep(30)
         return r.content
 
@@ -79,7 +81,7 @@ class pku_elective:
                     self.getStart()
                 break
             except:
-                print "Network Problem...3"
+                print "[Error] GET page content"
                 sleep(30)
         try:
             cont.append(self.getNext(pku_elective.page[1], referer=pku_elective.page[0]))
@@ -96,6 +98,7 @@ class pku_elective:
             capt = self.getNext(pku_elective.page_capt)
             with open('1.jpg','wb+') as p:
                 p.write(capt)
+            sleep(0.5)
             denoise.process('1.jpg', '2.jpg')
             os.system('tesseract -psm 8 2.jpg outputbase 2>/dev/null')
             with open('outputbase.txt') as p:
@@ -103,7 +106,7 @@ class pku_elective:
             try:
                 res = self.getNext(pku_elective.page_valid+t)
             except:
-                print "Network Problem...4"
+                print "[Error] GET page_valid"
                 sleep(30)
             if re.search(r'<valid>2</valid>', res):
                 break
@@ -116,13 +119,15 @@ class pku_elective:
             if not fl:
                 continue
             for match in fl:
-                for j in range(len(self.numbers)):
-                    if match.group(4) == self.numbers[j]:
+                for j in range(len(self.codes)):
+                    if match.group(3) == self.codes[j]:
                         courseList.append({'index':'%s' % match.group(2),
                                            'seq':'%s' % match.group(3),
-                                           'num':'%s' % self.numbers[j],
+                                           'num':'%s' % match.group(4),
                                            'page':'%s' % i})
-#        print courseList
+        if len(courseList) == 0:
+            print "[Error] Empty course list; check your course code!"
+#        print "\t[Course]", courseList
         return courseList
 
     def reFresh(self, cl):
@@ -138,7 +143,7 @@ class pku_elective:
                         sr1 = self.getNext(pku_elective.page_refresh, p, pku_elective.page[int(cl[i]['page'])])
                         break
                     except:
-                        print "Network Problem...5"
+                        print "[Error] GET page refresh"
                         sleep(30)
                 try:
                     fi1 = re.search(r'Num>(.*?)</', sr1).group(1)
@@ -150,7 +155,7 @@ class pku_elective:
                     self.elect(cl, i)
                 sleep(5)
             pku_elective.count += 1
-            print "There is no vacancy. Try time %s" % pku_elective.count
+            print "There is no vacancy. Try time %s." % pku_elective.count
 
 
     def elect(self, cl, i):
@@ -162,7 +167,7 @@ class pku_elective:
                 sr1 = self.getNext(pku_elective.page_elect, p, pku_elective.page[int(cl[i]['page'])])
                 break
             except:
-                print "Network Problem...6"
+                print "[Error] GET elect course"
                 sleep(30)
         c = self.getNext(pku_elective.page[0], referer=pku_elective.ssoLogin)
         s = re.search(r'总学分为：(.*?)<', c)
@@ -184,15 +189,18 @@ class pku_elective:
         cl = self.getCourse()
         self.decaptcha()
         self.reFresh(cl)
+
 if __name__ == '__main__':
-    numbers = raw_input("Please enter the maxium people of your desired course:").split()
+    codes = course_codes.course_codes
+    if len(codes) > 1:
+        print "currently support only 1 course only"
     new_elective = []
     try:
         for i in range(5):
-            new_elective.append(pku_elective(numbers))
+            new_elective.append(pku_elective(codes))
             thread.start_new_thread(new_elective[len(new_elective)-1].getStart, ())
             sleep(5)
-        new_elective.append(pku_elective(numbers))
+        new_elective.append(pku_elective(codes))
         new_elective[len(new_elective)-1].getStart()
     except KeyboardInterrupt, e:
         print "\nScript is terminated"
